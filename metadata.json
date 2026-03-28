@@ -1,0 +1,5 @@
+{
+  "name": "Eye Medicine Tracker",
+  "description": "A daily schedule tracker for eye drops and ointments with live progress tracking.",
+  "requestFramePermissions": []
+}
