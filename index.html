@@ -1,13 +1,169 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye Medicine Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        body {
+            background-color: #f9fafb;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .med-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .time-btn {
+            transition: all 0.2s ease;
+        }
+        .progress-bar-fill {
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="p-4 flex justify-center">
 
+    <div class="w-full max-w-[600px] flex flex-col gap-6">
+        
+        <!-- 1. HEADER -->
+        <header class="rounded-2xl overflow-hidden shadow-xl p-6 text-white" style="background: var(--primary-gradient);">
+            <h1 class="text-2xl font-bold mb-1">👁️ Aankhon ki Dawai Schedule</h1>
+            <p class="text-sm opacity-80 mb-6">9:00 AM – 9:00 PM</p>
+            
+            <div class="bg-black/20 rounded-xl p-4 backdrop-blur-md border border-white/10">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-medium text-sm" id="progress-text">Aaj ki progress — 0 / 15 doses ✅</span>
+                    <span class="text-xs font-bold" id="percent-text">0%</span>
+                </div>
+                <div class="h-2 w-full bg-white/20 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-green-400 progress-bar-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 2. MEDICINE CARDS -->
+        <div id="medicine-container" class="flex flex-col gap-4">
+            <!-- Cards will be injected here by JavaScript -->
+        </div>
+
+        <!-- 3. SCHEDULE TABLE CARD -->
+        <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+            <h3 class="text-lg font-bold mb-4">📋 Poora Schedule (Ek Nazar Mein)</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-gray-100">
+                            <th class="py-2 text-[10px] uppercase text-gray-400 font-bold">Time</th>
+                            <th class="py-2 text-[10px] uppercase font-bold text-[#E74C3C] text-center">GFC-HS</th>
+                            <th class="py-2 text-[10px] uppercase font-bold text-[#2980B9] text-center">Suthin</th>
+                            <th class="py-2 text-[10px] uppercase font-bold text-[#E67E22] text-center">Polymag</th>
+                            <th class="py-2 text-[10px] uppercase font-bold text-[#8E44AD] text-center">Lotel</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedule-table-body">
+                        <!-- Table rows will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. WARNING BOX -->
+        <div class="bg-[#FFF8E1] border border-orange-200 rounded-xl p-5">
+            <h4 class="text-orange-600 font-bold mb-3 flex items-center gap-2">
+                ⚠️ Yaad rakhein
+            </h4>
+            <ul class="text-sm text-gray-700 flex flex-col gap-2 list-disc pl-5">
+                <li>Eye drops pehle lagayein, ointment baad mein</li>
+                <li>Do alag dawaiyon ke beech 5-10 min ka gap rakhein</li>
+                <li>Lenses use karte hain toh pehle drops/ointment lagayein</li>
+            </ul>
+        </div>
+
+        <footer class="text-center py-4 text-gray-400 text-[10px] uppercase tracking-widest">
+            Eye Medicine Tracker • Made for Daily Use
+        </footer>
+    </div>
+
+    <script>
+        const MEDICINES = [
+            { id: 'gfc', name: 'GFC-HS', type: 'Eye Drops 💧', freq: '6 baar', color: '#E74C3C', times: ['9:00 AM', '11:00 AM', '1:00 PM', '3:00 PM', '5:00 PM', '7:00 PM'] },
+            { id: 'suthin', name: 'Suthin Gold', type: 'Eye Drops 💧', freq: '4 baar', color: '#2980B9', times: ['9:00 AM', '1:00 PM', '5:00 PM', '9:00 PM'] },
+            { id: 'poly', name: 'Polymag', type: 'Eye Ointment 🧴', freq: '3 baar', color: '#E67E22', times: ['9:00 AM', '3:00 PM', '9:00 PM'] },
+            { id: 'lotel', name: 'Lotel', type: 'Eye Ointment 🧴', freq: '2 baar', color: '#8E44AD', times: ['9:00 AM', '9:00 PM'] }
+        ];
+
+        const ALL_TIMES = ['9:00 AM', '11:00 AM', '1:00 PM', '3:00 PM', '5:00 PM', '7:00 PM', '9:00 PM'];
+        const TOTAL_DOSES = 15;
+
+        // State management
+        let completedDoses = JSON.parse(localStorage.getItem('eye-tracker-v2') || '{}');
+
+        function updateProgress() {
+            const count = Object.values(completedDoses).filter(Boolean).length;
+            const percent = Math.round((count / TOTAL_DOSES) * 100);
+            
+            document.getElementById('progress-text').innerText = `Aaj ki progress — ${count} / ${TOTAL_DOSES} doses ✅`;
+            document.getElementById('percent-text').innerText = `${percent}%`;
+            document.getElementById('progress-bar').style.width = `${percent}%`;
+            
+            localStorage.setItem('eye-tracker-v2', JSON.stringify(completedDoses));
+        }
+
+        function toggleDose(medId, time) {
+            const key = `${medId}-${time}`;
+            completedDoses[key] = !completedDoses[key];
+            renderCards();
+            updateProgress();
+        }
+
+        function renderCards() {
+            const container = document.getElementById('medicine-container');
+            container.innerHTML = MEDICINES.map(med => `
+                <div class="bg-white rounded-xl shadow-sm border-l-[6px] p-4 med-card" style="border-left-color: ${med.color}">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h2 class="text-lg font-bold" style="color: ${med.color}">${med.name}</h2>
+                            <p class="text-xs text-gray-400">${med.type}</p>
+                        </div>
+                        <span class="bg-gray-100 text-gray-500 text-[10px] uppercase font-bold px-2 py-1 rounded-md">${med.freq}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${med.times.map(time => {
+                            const isDone = completedDoses[`${med.id}-${time}`];
+                            return `
+                                <button onclick="toggleDose('${med.id}', '${time}')" 
+                                    class="time-btn px-3 py-1.5 rounded-lg text-xs font-semibold border ${isDone ? 'text-white' : 'bg-white border-gray-200 text-gray-500'}"
+                                    style="background-color: ${isDone ? med.color : 'transparent'}; border-color: ${isDone ? med.color : ''}">
+                                    ${isDone ? '✓ ' + time : time}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('schedule-table-body');
+            tbody.innerHTML = ALL_TIMES.map((time, idx) => `
+                <tr class="${idx % 2 === 0 ? 'bg-[#fafafa]' : 'bg-white'}">
+                    <td class="py-3 text-xs font-bold text-gray-600">${time}</td>
+                    ${MEDICINES.map(med => `
+                        <td class="py-3 text-center">
+                            ${med.times.includes(time) ? '<span class="text-sm">💊</span>' : '<span class="text-gray-200 text-xs">—</span>'}
+                        </td>
+                    `).join('')}
+                </tr>
+            `).join('');
+        }
+
+        // Initial Render
+        renderCards();
+        renderTable();
+        updateProgress();
+    </script>
+</body>
+</html>
